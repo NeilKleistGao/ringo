@@ -69,5 +69,7 @@ tests/
 - 无头验证：`--quit-after N` 的 N 是**帧数**不是秒数；插件里 GD.Print 不一定到 stdout，可用 `FileAccess` 写 `res://` 文件做日志；`--script` 跑 C# SceneTree 在无头模式会崩溃（signal 11），改用环境变量触发插件内自检。
 - 选中资源后用 `LoopImportApplier.ReadSettings()` 读取现有导入配置回填对话框（含循环模式），应用时写用户选择的循环模式，不得硬编码覆盖。
 - **关键**：`.import` 的 WAV `edit/loop_mode` 枚举是 0=Detect From Cue Points、1=Disabled、2=Forward、3=Ping-Pong、4=Backward（见 resource_importer_wav.cpp，`< 2` 时隐藏 begin/end），比 `AudioStreamWav.LoopMode`（0=Disabled..3=Backward）**偏移 1**；UI 下拉框必须使用前者，混淆会导致引擎显示的模式总比设置值“小一档”。
+- Godot mono Windows zip 解压后有**顶层嵌套目录**，exe 路径不要硬编码，用 `Get-ChildItem -Recurse -Filter "*_console.exe"` 动态解析并写入 `$env:GITHUB_ENV` 供后续步骤使用。
+- GitHub Actions 工作流的 `run:` 单行命令**不能以 `&` 开头**（YAML 会把它解析成锚点导致整个工作流文件无效，运行显示 0 个 job 直接失败）；PowerShell 调用 exe 直接写相对路径加参数即可，只有多行 `run: |` 块内才可用 `&`。
 - 编辑器内自动化测试的坑：编辑器启动时 C# 热重载会把同一定时器信号投递给新旧两个程序集（间隔毫秒级），测试主体必须用**文件系统标记**做幂等去重（静态标志跨不了 AssemblyLoadContext）；`ReimportFiles` 是异步的，校验引擎侧状态要延迟轮询；WAV 导入器仅在 `edit/loop_mode >= 2`（启用循环）时才应用 loop_begin/loop_end 到引擎资源。
 - 回填防踩踏：`ReimportFiles` 会异步再次触发 `EditorResourcePicker.ResourceChanged`，回填必须按资源路径去重（`PopulateFromCurrentSettings(force: false)`），否则会覆盖用户未确认的下拉框修改（表现为“确认写入的是上一次的选择”）；对话框每次打开时（`VisibilityChanged`）再强制回填一次以反映外部改动。

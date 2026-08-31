@@ -20,22 +20,27 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_mono_win64.zip" -OutFile godot.zip
           Expand-Archive -Path godot.zip -DestinationPath godot
-          Get-ChildItem godot -Filter *.exe | Select-Object Name
+          Get-ChildItem godot -Recurse -Filter *.exe | Select-Object FullName
+          # The mono zip nests its files under a top-level folder, so resolve
+          # the console exe dynamically instead of hardcoding a path.
+          $exe = (Get-ChildItem godot -Recurse -Filter "*_console.exe" | Select-Object -First 1).FullName
+          if (-not $exe) { Write-Error "Godot console exe not found after extraction"; exit 1 }
+          "GODOT_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "GODOT_EXE=$exe"
 
       - name: Build C# assembly
         run: dotnet build ringo.csproj -c Debug
 
       - name: Import project assets
-        # NOTE: no "&" call operator here — a plain YAML scalar starting with &
-        # is parsed as an anchor and makes the whole workflow file invalid.
-        run: .\godot\Godot_v4.7-stable_mono_win64_console.exe --headless --path . --import
+        run: |
+          & $env:GODOT_EXE --headless --path . --import
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run regression test
         env:
           RINGO_RUN_TESTS: "1"
         run: |
-          & .\godot\Godot_v4.7-stable_mono_win64_console.exe --headless -e --path .
-          $code = $LASTEXITCODE
-          Write-Host "editor exit code: $code"
+          & $env:GODOT_EXE --headless -e --path .
+          Write-Host "editor exit code: $LASTEXITCODE"
           Get-Content .\test_result.txt
           if (-not (Select-String -Path .\test_result.txt -Pattern "RINGO_TEST_RESULT: PASS" -Quiet)) { exit 1 }
