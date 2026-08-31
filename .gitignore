@@ -7,3 +7,5 @@ test_result.txt
 test_trace.txt
 
 .vs/
+
+.ringo_test_lock/

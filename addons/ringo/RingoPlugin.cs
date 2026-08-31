@@ -31,8 +31,30 @@ public partial class RingoPlugin : EditorPlugin
         AddToolSubmenuItem("ringo", _menu);
 
         // Regression test entry point: godot --headless -e with RINGO_RUN_TESTS=1.
+        // Resolved by reflection so this plugin has NO compile-time dependency
+        // on the test code: addons/ringo can be copied into other projects
+        // without the tests/ folder and still builds and runs fine.
         if (OS.GetEnvironment("RINGO_RUN_TESTS") == "1")
-            Tests.LoopImportRegressionTest.Schedule(this);
+            TryScheduleRegressionTest();
+    }
+
+    private void TryScheduleRegressionTest()
+    {
+        System.Type type = null;
+        foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+        {
+            type = assembly.GetType("Ringo.Tests.LoopImportRegressionTest", false);
+            if (type != null)
+                break;
+        }
+        var schedule = type?.GetMethod("Schedule",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (schedule == null)
+        {
+            GD.PrintErr("[ringo] RINGO_RUN_TESTS is set but Ringo.Tests.LoopImportRegressionTest was not found.");
+            return;
+        }
+        schedule.Invoke(null, new object[] { this });
     }
 
     public override void _ExitTree()

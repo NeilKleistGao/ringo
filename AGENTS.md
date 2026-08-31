@@ -34,7 +34,7 @@ addons/ringo/
   AudioSampleRateProbe.cs  # 从 OGG/MP3 文件头解析采样率
   LoopMath.cs              # 小节→秒换算（对话框与回归测试共用）
 tests/
-  LoopImportRegressionTest.cs # 回归测试：RINGO_RUN_TESTS=1 时在编辑器内运行
+  LoopImportRegressionTest.cs # 回归测试：RINGO_RUN_TESTS=1 时在编辑器内运行（与插件解耦，可整体删除）
 .github/workflows/
   regression-test.yml      # GitHub CI：构建 + 导入 + 跑回归测试
 ```
@@ -72,4 +72,5 @@ tests/
 - Godot mono Windows zip 解压后有**顶层嵌套目录**，exe 路径不要硬编码，用 `Get-ChildItem -Recurse -Filter "*_console.exe"` 动态解析并写入 `$env:GITHUB_ENV` 供后续步骤使用。
 - GitHub Actions 工作流的 `run:` 单行命令**不能以 `&` 开头**（YAML 会把它解析成锚点导致整个工作流文件无效，运行显示 0 个 job 直接失败）；PowerShell 调用 exe 直接写相对路径加参数即可，只有多行 `run: |` 块内才可用 `&`。
 - 编辑器内自动化测试的坑：编辑器启动时 C# 热重载会把同一定时器信号投递给新旧两个程序集（间隔毫秒级），测试主体必须用**文件系统标记**做幂等去重（静态标志跨不了 AssemblyLoadContext）；`ReimportFiles` 是异步的，校验引擎侧状态要延迟轮询；WAV 导入器仅在 `edit/loop_mode >= 2`（启用循环）时才应用 loop_begin/loop_end 到引擎资源。
+- **插件本体不得引用测试代码**：`RingoPlugin` 通过反射按全名查找 `Ringo.Tests.LoopImportRegressionTest` 并调用其 `Schedule`，因此 `addons/ringo` 可单独拷入其他项目编译使用；改测试类名/方法签名时必须同步改反射字符串。
 - 回填防踩踏：`ReimportFiles` 会异步再次触发 `EditorResourcePicker.ResourceChanged`，回填必须按资源路径去重（`PopulateFromCurrentSettings(force: false)`），否则会覆盖用户未确认的下拉框修改（表现为“确认写入的是上一次的选择”）；对话框每次打开时（`VisibilityChanged`）再强制回填一次以反映外部改动。
