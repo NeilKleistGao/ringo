@@ -1,0 +1,39 @@
+name: Regression Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  regression-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Download Godot 4.7 (.NET)
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_mono_win64.zip" -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot
+          Get-ChildItem godot -Filter *.exe | Select-Object Name
+
+      - name: Build C# assembly
+        run: dotnet build ringo.csproj -c Debug
+
+      - name: Import project assets
+        run: & .\godot\Godot_v4.7-stable_mono_win64_console.exe --headless --path . --import
+
+      - name: Run regression test
+        env:
+          RINGO_RUN_TESTS: "1"
+        run: |
+          & .\godot\Godot_v4.7-stable_mono_win64_console.exe --headless -e --path .
+          $code = $LASTEXITCODE
+          Write-Host "editor exit code: $code"
+          Get-Content .\test_result.txt
+          if (-not (Select-String -Path .\test_result.txt -Pattern "RINGO_TEST_RESULT: PASS" -Quiet)) { exit 1 }

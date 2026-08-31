@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://ommgpp28njmx"
+path="res://.godot/imported/little star demo.wav-2a69e6b1e35db0355e907b718cf1ba7d.sample"
+
+[deps]
+
+source_file="res://little star demo.wav"
+dest_files=["res://.godot/imported/little star demo.wav-2a69e6b1e35db0355e907b718cf1ba7d.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=576000
+edit/loop_end=-1
+compress/mode=2

@@ -1,3 +1,9 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Regression test output (generated)
+test_result.txt
+test_trace.txt
+
+.vs/
